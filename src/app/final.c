@@ -6,96 +6,131 @@ int* A;
 int* B;
 int N;
 int T;
+unsigned long length;
+
+/* ATENCION PARA EJECUTAR EN EL CLUSTER
+
+USAR EL COMANDO sbatch ./script.sh
+si solo corro el comando ./script.sh va a correr el comando en el front
+*/
 
 double dwalltime();
+void* initArray(void*);
 void* inicializar(void);
-
-void* funcion(void *arg){
-    int tid=*(int*)arg;
-    int inicio = (N/T)*tid;
-    int limite = inicio+(N/T);
-    int minimo = 1025;
-    int maximo = -1;
-    printf("Hilo id:%d\n",tid);
-
-    for (int i = inicio; i < limite; i++) {
-        if(A[i] < minimo){
-            B[tid] = A[i];
-            minimo = A[i];
-        }else{
-            if(A[i] > maximo){
-                B[tid + T] = A[i];
-                maximo = A[i];
-            }
-        }
-    }
-    pthread_exit(NULL);
-}
+void mergesort(int* array, int left, int right);
+void sort(int*, int left, int right);
+void* funcion(void *arg);
 
 int main(int argc, char* argv[]){
 
     N = atoi(argv[1]); //longitud arrays
-    printf("2^N = %lu\n", (unsigned long)(1<<N));
-    return 0;
     T = atoi(argv[2]); //cantidad de threads
-    pthread_t misThreads[T];
     int threads_ids[T];
-
+    pthread_t misThreads[T];
+    length = (1<<N);
+    printf("Generando array de %lu elementos\n",length);
     inicializar();
+    printf("A[] = { ");
+    for(int i=0;i<length;i++){
+        printf("%d; ",A[i]);
+    }
+    printf("}\n");
+
+    printf("B[] = { ");
+    for(int i=0;i<length;i++){
+        printf("%d; ",B[i]);
+    }
+    printf("}\n");
 
     double timetick = dwalltime();
+
     for(int id=0;id<T;id++){
         threads_ids[id]=id;
         pthread_create(&misThreads[id],NULL,&funcion,(void*)&threads_ids[id]);
     }
 
-    int minimo = 1025;
-    int maximo = -1;
-
     for(int id=0;id<T;id++){
         pthread_join(misThreads[id],NULL);
-        if(B[id] < minimo){
-            minimo = B[id];
-        }else{
-            if(B[id+T] > maximo){
-                maximo = B[id+T];
-            }
-        }
     }
-
-    printf("B[minimos] = ");
-    for (int i = 0; i < T; i++) {
-        printf("%d ",B[i]);
+    
+    printf("A[] = { ");
+    for(int i=0;i<length;i++){
+        printf("%d; ",A[i]);
     }
-    printf("\nB[maximos] = ");
-    for (int i = T; i < T*2; i++) {
-        printf("%d ",B[i]);
+    printf("}\n");
+    printf("B[] = { ");
+    for(int i=0;i<length;i++){
+        printf("%d; ",B[i]);
     }
-
-    printf("\nEl numero minimo es: %d\nEl numero maximo es:%d\n", minimo, maximo);
+    printf("}\n");
     printf("Tiempo de ejecucion: %fs \n", dwalltime() - timetick);
 
     free(A);
     free(B);
-
     return 0;
 }
 
 
-void* inicializar(void){
-    //alocamos matrices en heap
-    A = (int*)malloc(sizeof(int)*(2^N));
-    B = (int*)malloc(sizeof(int)*T*2);
-    //inicializamos A y B en 1
-    printf("A[%d] = ",N);
-    for (int i = 0; i < N; i++) {
-        A[i] = rand() % 1024;
-        printf("%d ",A[i]);
+/*_________________MERGE SORT___________________*/
+void mergesort(int* array, int left, int right){
+    int longitud = right-left;
+    int floor, offset;
+    for(offset=2;offset<=longitud;offset=offset*2){
+        for(int floor=0;floor<longitud;floor=floor+offset){
+            sort(array, floor, floor+offset);
+        }
     }
-    printf("\n");
 }
 
-/*___________________________*/
+void sort(int* array, int left, int right){
+    int middle = ((right - left)/2) + left;
+    int i=left, j=middle, k=0;
+    int temp[right-left];
+    while(i<middle && j<right){
+        if(array[i] <= array[j])
+            temp[k++] = array[i++];
+        else
+            temp[k++] = array[j++];
+    }
+    while (i < middle)
+        temp[k++] = array[i++];
+    while(j < right)
+        temp[k++] = array[j++];
+    k--;
+    while(k >= 0) {
+        array[left + k] = temp[k];
+        k--;
+    }
+}
+
+/*__________SCHEDULER________________*/
+void* funcion(void *arg){
+    int tid=*(int*)arg;
+    int inicio = (length/T)*tid;
+    int limite = inicio+(length/T);
+    printf("Hilo id:%d sorting A[] segment . . .\n", tid);
+    mergesort(A,inicio,limite);
+    printf("Hilo id:%d sorting B[]] segment . . .\n", tid);
+    mergesort(B,inicio,limite);
+
+    
+    pthread_exit(NULL);
+}
+
+
+void* inicializar(void){
+    int i;
+    //alocamos matrices en heap
+    A = (int*)malloc(sizeof(int)*(length));
+    B = (int*)malloc(sizeof(int)*(length));
+    //inicializamos A
+    for(i=0;i<length;i++){
+        A[i] = rand() % 1024;
+        B[length-i-1] = A[i];
+    }
+}
+
+/*_____________TIME______________*/
 #include <sys/time.h>
 
 double dwalltime()
