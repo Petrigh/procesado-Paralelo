@@ -7,6 +7,8 @@ int* B;
 int N;
 int T;
 unsigned long length;
+pthread_barrier_t* barreraMerge;
+pthread_barrier_t barreraCompare;
 
 /* ATENCION PARA EJECUTAR EN EL CLUSTER
 
@@ -15,16 +17,15 @@ si solo corro el comando ./script.sh va a correr el comando en el front
 */
 
 double dwalltime();
-void* initArray(void*);
 void* inicializar(void);
 void mergesort(int* array, int left, int right);
 void sort(int*, int left, int right);
-void* funcion(void *arg);
+void* divideAndConquer(void *arg);
 
 int main(int argc, char* argv[]){
 
-    N = atoi(argv[1]); //longitud arrays
-    T = atoi(argv[2]); //cantidad de threads
+    N = 4;//atoi(argv[1]); //longitud arrays
+    T = 4;//atoi(argv[2]); //cantidad de threads
     int threads_ids[T];
     pthread_t misThreads[T];
     length = (1<<N);
@@ -46,7 +47,7 @@ int main(int argc, char* argv[]){
 
     for(int id=0;id<T;id++){
         threads_ids[id]=id;
-        pthread_create(&misThreads[id],NULL,&funcion,(void*)&threads_ids[id]);
+        pthread_create(&misThreads[id],NULL,&divideAndConquer,(void*)&threads_ids[id]);
     }
 
     for(int id=0;id<T;id++){
@@ -75,8 +76,8 @@ int main(int argc, char* argv[]){
 void mergesort(int* array, int left, int right){
     int longitud = right-left;
     int floor, offset;
-    for(offset=2;offset<=longitud;offset=offset*2){
-        for(int floor=0;floor<longitud;floor=floor+offset){
+    for(offset=2;offset<=longitud;offset=offset*2){ //arma paquetes de 2; 4; ...; n/2 elementos
+        for(int floor=left;floor<right;floor=floor+offset){ //sorta el paquete
             sort(array, floor, floor+offset);
         }
     }
@@ -104,30 +105,39 @@ void sort(int* array, int left, int right){
 }
 
 /*__________SCHEDULER________________*/
-void* funcion(void *arg){
+void* divideAndConquer(void *arg){
     int tid=*(int*)arg;
-    int inicio = (length/T)*tid;
+    int inicio = ((length<<1)/T)*(tid%(T/2));
     int limite = inicio+(length/T);
-    printf("Hilo id:%d sorting A[] segment . . .\n", tid);
-    mergesort(A,inicio,limite);
+    if(tid>(T/2)){
+
+    }else{
+
+    }
+
     printf("Hilo id:%d sorting B[]] segment . . .\n", tid);
-    mergesort(B,inicio,limite);
+    mergesort(A,inicio,limite);
 
     
     pthread_exit(NULL);
 }
 
-
+/*_______________INITIALIZER_________________*/
 void* inicializar(void){
     int i;
     //alocamos matrices en heap
     A = (int*)malloc(sizeof(int)*(length));
     B = (int*)malloc(sizeof(int)*(length));
+    barreraMerge = (pthread_barrier_t*)malloc(sizeof(pthread_barrier_t)*(T));
     //inicializamos A
     for(i=0;i<length;i++){
         A[i] = rand() % 1024;
         B[length-i-1] = A[i];
     }
+    for(i=0;i<T;i++){
+        barreraMerge[i]= pthread_barrier_init(&barreraMerge[i], NULL, 2);
+    }
+    barreraCompare = pthread_barrier_init(&barreraCompare, NULL, T);
 }
 
 /*_____________TIME______________*/
