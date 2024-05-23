@@ -20,6 +20,7 @@ si solo corro el comando ./script.sh va a correr el comando en el front
 
 double dwalltime();
 int logaritmo2(int x);
+void* printArray(int*);
 void* inicializar(void);
 void* finalizar(void);
 void* mergesort(int* array, int left, int right);
@@ -35,6 +36,7 @@ int main(int argc, char* argv[]){
     pthread_t misThreads[T];
     length = (1<<N);
     inicializar();
+
     double timetick = dwalltime();
 
     for(int id=0;id<T;id++){
@@ -101,12 +103,12 @@ void* sort(int* array, int left, int right){
 void* divideAndConquer(void *arg){
     int tid=*(int*)arg;
     int numThread = T/2; //una mitad para A[] y la otra para B[]
-    int arrayLength = (length<<1)/T;
+    int parte = length/numThread;
     int inicio, limite;
     int fase =0;
-    while(fase<numThread){
-        inicio = arrayLength*((tid)%numThread);
-        limite = arrayLength*((tid+fase)%numThread)+arrayLength;
+    while(parte<=length){
+        inicio = parte*((tid)%numThread);
+        limite = parte*((tid)%numThread)+parte;
         if(tid<numThread){
             mergesort(A,inicio,limite);
         }else{
@@ -117,20 +119,19 @@ void* divideAndConquer(void *arg){
             break; //los threads ociosos salen
         }
         (fase) ? (fase = fase<<1) : (fase = 1);
+        parte = parte<<1;
     }
 
-    pthread_barrier_init(&barreraCompare, NULL, T);
+    pthread_barrier_wait(&barreraCompare);
 
-    arrayLength = length/T;
-    inicio = arrayLength*tid;
-    limite = arrayLength*tid+arrayLength;
+    parte=length/T;
+    inicio = parte*tid;
+    limite = parte*tid+parte;
     if(compare(inicio,limite)){
         pthread_mutex_lock(&compareMutex);
         compareResult = 1;
         pthread_mutex_unlock(&compareMutex);
     }
-    
-
     pthread_exit(NULL);
 }
 
@@ -182,4 +183,13 @@ int logaritmo2(int x){
     int result = 0;
     while(aux>>=1)
         result++;
+}
+
+/*__________PRINT_________*/
+void* printArray(int* array){
+    printf("{ ");
+    for(int i=0;i<length;i++){
+        printf("%d; ",array[i]);
+    }
+    printf("}\n");
 }
