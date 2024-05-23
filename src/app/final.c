@@ -19,22 +19,22 @@ si solo corro el comando ./script.sh va a correr el comando en el front
 */
 
 double dwalltime();
-int logaritmo2(int x);
+int logaritmo2(int);
 void* printArray(int*);
 void* inicializar(void);
 void* finalizar(void);
-void* mergesort(int* array, int left, int right);
-void* sort(int*, int left, int right);
-int compare(int left, int right);
-void* divideAndConquer(void *arg);
+void* mergesort(int*, int, int, int);
+void* sort(int*, int, int);
+int compare(int, int);
+void* divideAndConquer(void*);
 
 int main(int argc, char* argv[]){
 
-    N = atoi(argv[1]); //longitud arrays
-    T = atoi(argv[2]); //cantidad de threads
+    N = atoi(argv[1]); // 2^N
+    T = atoi(argv[2]); //cantidad de threads   comment: revisar 8 o mas threads en cluster
     int threads_ids[T];
     pthread_t misThreads[T];
-    length = (1<<N);
+    length = (1<<N); //longitud arrays
     inicializar();
 
     double timetick = dwalltime();
@@ -57,6 +57,9 @@ int main(int argc, char* argv[]){
     finalizar();
     return 0;
 }
+/*
+|A______________| |B______________|
+*/
 
 /*__________________COMPARE______________________*/
 int compare(int left, int right){
@@ -68,10 +71,10 @@ int compare(int left, int right){
     return 0;
 }
 /*_________________MERGE SORT___________________*/
-void* mergesort(int* array, int left, int right){
+void* mergesort(int* array, int left, int right, int fase){
     int longitud = right-left;
     int floor, offset;
-    for(offset=2;offset<=longitud;offset=offset*2){ //arma paquetes de 2; 4; ...; n/2 elementos
+    for(offset=fase;offset<=longitud;offset=offset*2){ //arma paquetes de 2; 4; ...; n/2 elementos
         for(int floor=left;floor<right;floor=floor+offset){ //sorta el paquete
             sort(array, floor, floor+offset);
         }
@@ -105,20 +108,22 @@ void* divideAndConquer(void *arg){
     int numThread = T/2; //una mitad para A[] y la otra para B[]
     int parte = length/numThread;
     int inicio, limite;
-    int fase =0;
+    int fase=0;
+    int offset = 2;
     while(parte<=length){
         inicio = parte*((tid)%numThread);
         limite = parte*((tid)%numThread)+parte;
         if(tid<numThread){
-            mergesort(A,inicio,limite);
+            mergesort(A,inicio,limite,offset);
         }else{
-            mergesort(B,inicio,limite);
+            mergesort(B,inicio,limite,offset);
         }
         pthread_barrier_wait(&barreraMerge[(tid/(1<<(fase+1)))]);
         if (tid % (1 << (fase + 1)) != 0) {
             break; //los threads ociosos salen
         }
         (fase) ? (fase = fase<<1) : (fase = 1);
+        offset = parte;
         parte = parte<<1;
     }
 
