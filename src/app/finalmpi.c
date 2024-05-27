@@ -62,19 +62,48 @@ int main(int argc, char** argv){
         
         double timetick = dwalltime(); // Empiezo el calculo del tiempo en ejecutar
     }
+    int maxFases = 0;
+    int counts[nrProcesos];
+    int displacements[nrProcesos];
+    for(int i= 0; i<nrProcesos;i++){
+        displacements[i] = (N/nrProcesos)*i
+    }
+    for(int k=0;k<maxFases;k++){
+        for(int j=0; j<nrProcesos; j++){
+            if(j%(1<<k)){
+                counts[j] = 0;
+            }else{
+                counts[j] = (N/nrProcesos)*(1<<k);
+            }
+        }
+        /*
+        A[N] = { X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X ,X, X, X, X, X }
+                |  proceso 0  |  proceso 1  |  proceso 2  |  proceso 3  |  proceso 4  |  proceso 5  |  proceso 6  | proceso 7 |
 
-    // Se distribuye los arreglos entre los procesos
-    MPI_Scatter(A, N/nrProcesos, MPI_INT, parteA, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Scatter(B, N/nrProcesos, MPI_INT, parteB, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
+        counts = { 5, 5, 5, 5, 5, 5, 5, 5 }
+        displacement = { 0, 5, 10 15, 20, 25, 30, 35, 40}
 
-    // Ordena cada arreglo asignado
-    mergesort(parteA, N/nrProcesos);
-    mergesort(parteB, N/nrProcesos);
+        A[N] = { X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X ,X, X, X, X, X, X, X }
+                |  proceso 0                                            |  proceso 4                                                |
 
-    // Se obtiene cada parte de cada arreglo ordenado y se adjunta a los arreglos originales
-    MPI_Gather(parteA, N/nrProcesos, MPI_INT, A, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Gather(parteB, N/nrProcesos, MPI_INT, B, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
+        counts = { 20, 0, 0, 0, 20, 0, 0, 0, 0 }
+        displacement = { 0, X, X, X, 20, X, X, X, }
+        */
 
+        // Se distribuye los arreglos entre los procesos
+        MPI_Scatter(A, N/nrProcesos, MPI_INT, parteA, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Scatter(B, N/nrProcesos, MPI_INT, parteB, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
+
+        // Ordena cada arreglo asignado
+        mergesort(parteA, N/nrProcesos);
+        mergesort(parteB, N/nrProcesos);
+
+        // Se obtiene cada parte de cada arreglo ordenado y se adjunta a los arreglos originales
+        MPI_Gather(parteA, N/nrProcesos, MPI_INT, A, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Gather(parteB, N/nrProcesos, MPI_INT, B, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
+        wait(terminaron);
+
+    }
     // Procedo a ordenar cada parte 
     if (miID == 0){
         
