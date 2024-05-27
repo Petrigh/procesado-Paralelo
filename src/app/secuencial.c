@@ -1,16 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 
 int* A;
 int* B;
 int N;
-int T;
 unsigned long length;
-pthread_barrier_t* barreraMerge;
-pthread_barrier_t barreraCompare;
-pthread_mutex_t compareMutex;
-int compareResult = 0;
 
 /* ATENCION PARA EJECUTAR EN EL CLUSTER
 
@@ -24,7 +18,6 @@ void* finalizar(void);
 void* mergesort(int*, int, int, int);
 void* sort(int*, int, int);
 int compare(int, int);
-void* divideAndConquer(void*);
 
 int main(int argc, char* argv[]){
 
@@ -33,30 +26,16 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-    if (atoi(argv[2]) > 0 && atoi(argv[2])%2){
-        printf("El numero de procesos debe de ser par mayor a 0\n");
-        return 1;
-    }
-
     N = atoi(argv[1]); // 2^N
-    T = atoi(argv[2]); //cantidad de threads   comment: revisar 8 o mas threads en cluster
-    int threads_ids[T];
-    pthread_t misThreads[T];
     length = (1<<N); //longitud arrays
-    inicializar(); //Inicializa los dos arreglos
+    inicializar();
     
     double timetick = dwalltime();
+    mergesort(A,0,length,2);
+    mergesort(B,0,length,2);
+    int compareResult = compare(0,length);
 
-    for(int id=0;id<T;id++){
-        threads_ids[id]=id;
-        pthread_create(&misThreads[id],NULL,&divideAndConquer,(void*)&threads_ids[id]);
-    }
-
-    for(int id=0;id<T;id++){
-        pthread_join(misThreads[id],NULL);
-    }
     printf("Tiempo de ejecucion: %fs \n", dwalltime() - timetick);
-
     if(compareResult)
         printf("Los arreglos son distintos\n");
     else
@@ -65,17 +44,19 @@ int main(int argc, char* argv[]){
     finalizar();
     return 0;
 }
+/*
+|A______________| |B______________|
+*/
 
 /*__________________COMPARE______________________*/
 int compare(int left, int right){
-    for(int i=left;i<=right;i++){
+    for(int i=left;i<right;i++){
         if(A[i] != B[i]){
             return 1;
         }
     }
     return 0;
 }
-
 /*_________________MERGE SORT___________________*/
 void* mergesort(int* array, int left, int right, int fase){
     int longitud = right-left;
@@ -108,43 +89,6 @@ void* sort(int* array, int left, int right){
     }
 }
 
-/*__________SCHEDULER________________*/
-void* divideAndConquer(void *arg){
-    int tid=*(int*)arg;
-    int numThread = T/2; //una mitad para A[] y la otra para B[]
-    int parte = length/numThread;
-    int inicio, limite;
-    int fase=0;
-    int offset = 2;
-    while(parte<=length){
-        inicio = parte*((tid)%numThread);
-        limite = parte*((tid)%numThread)+parte;
-        if(tid<numThread){
-            mergesort(A,inicio,limite,offset);
-        }else{
-            mergesort(B,inicio,limite,offset);
-        }
-        pthread_barrier_wait(&barreraMerge[(tid/(1<<(fase+1)))]);
-        if (tid % (1 << (fase + 1)) != 0) {
-            break; //los threads ociosos salen
-        }
-        (fase) ? (fase = fase<<1) : (fase = 1);
-        offset = parte;
-        parte = parte<<1;
-    }
-
-    pthread_barrier_wait(&barreraCompare);
-
-    parte=length/T;
-    inicio = parte*tid;
-    limite = parte*tid+parte-1;
-    if(compare(inicio,limite)){
-        pthread_mutex_lock(&compareMutex);
-        compareResult = 1;
-        pthread_mutex_unlock(&compareMutex);
-    }
-    pthread_exit(NULL);
-}
 
 /*_______________INITIALIZER_________________*/
 void* inicializar(void){
@@ -152,7 +96,6 @@ void* inicializar(void){
     //alocamos matrices en heap
     A = (int*)malloc(sizeof(int)*(length));
     B = (int*)malloc(sizeof(int)*(length));
-    barreraMerge = (pthread_barrier_t*)malloc(sizeof(pthread_barrier_t)*(T/2));
     //inicializamos A
     for(i=0;i<length;i++){
         A[i] = rand() % 1024;
@@ -163,20 +106,9 @@ void* inicializar(void){
     A[length-1]= 10;
     B[0]= 10;
     B[length-1]= 10;
-
-    for(i=0;i<(T/2);i++){
-        pthread_barrier_init(&barreraMerge[i], NULL, 2);
-    }
-    pthread_barrier_init(&barreraCompare, NULL, T);
-    pthread_mutex_init(&compareMutex, NULL);
 }
 
 void* finalizar(void){
-    pthread_mutex_destroy(&compareMutex);
-    pthread_barrier_destroy(&barreraCompare);
-    for(int i=0;i<(T/2);i++){
-        pthread_barrier_destroy(&barreraMerge[i]);
-    }
     free(A);
     free(B);
 }
