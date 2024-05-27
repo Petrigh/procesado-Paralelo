@@ -35,7 +35,12 @@ int main(int argc, char* argv[]){
     int threads_ids[T];
     pthread_t misThreads[T];
     length = (1<<N); //longitud arrays
-    inicializar();
+    inicializar(); //Inicializa los dos arreglos
+
+    if (T/2 < 1){
+        printf(stderr, "El numero de procesos debe de ser par");
+        return 1;
+    }
     
     double timetick = dwalltime();
 

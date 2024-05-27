@@ -49,12 +49,6 @@ int main(int argc, char** argv){
         // Defino los arreglos a comparar
         A = (int*)malloc(sizeof(int)*N);
         B = (int*)malloc(sizeof(int)*N);
-        
-        /*
-        // Defino los arreglos en donde se guardan las partes ordenadas de cada proceso
-        ordenadoA = (int*)malloc(sizeof(int)*N);
-        ordenadoB = (int*)malloc(sizeof(int)*N);
-        */
 
         inicializar(A,B,N); // Inicializo los dos arreglos
         
@@ -109,12 +103,12 @@ int main(int argc, char** argv){
         MPI_Scatterv(B, counts, displacements, MPI_INT, parteB, (N/nrProcesos)*(1<<k), MPI_INT, 0, MPI_COMM_WORLD);
 
         // Ordena cada arreglo asignado
-        mergesort(parteA, N/nrProcesos);
-        mergesort(parteB, N/nrProcesos);
+        mergesort(parteA, (N/nrProcesos)*(1<<k));
+        mergesort(parteB, (N/nrProcesos)*(1<<k));
 
         // Se obtiene cada parte de cada arreglo ordenado y se adjunta a los arreglos originales
-        MPI_Gather(parteA, N/nrProcesos, MPI_INT, A, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Gather(parteB, N/nrProcesos, MPI_INT, B, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Gatherv(parteA, N/nrProcesos, MPI_INT, A, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Gatherv(parteB, N/nrProcesos, MPI_INT, B, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
 
     }
     // Procedo a ordenar cada parte 
