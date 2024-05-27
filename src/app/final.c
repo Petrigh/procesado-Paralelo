@@ -19,8 +19,6 @@ si solo corro el comando ./script.sh va a correr el comando en el front
 */
 
 double dwalltime();
-int logaritmo2(int);
-void* printArray(int*);
 void* inicializar(void);
 void* finalizar(void);
 void* mergesort(int*, int, int, int);
@@ -30,17 +28,22 @@ void* divideAndConquer(void*);
 
 int main(int argc, char* argv[]){
 
+    if (atoi(argv[1]) <= 0){
+        printf("El tamano del array debe de ser mayor a 1\n");
+        return 1;
+    }
+
+    if (atoi(argv[2]) > 0 && atoi(argv[2])%2){
+        printf("El numero de procesos debe de ser par mayor a 0\n");
+        return 1;
+    }
+
     N = atoi(argv[1]); // 2^N
     T = atoi(argv[2]); //cantidad de threads   comment: revisar 8 o mas threads en cluster
     int threads_ids[T];
     pthread_t misThreads[T];
     length = (1<<N); //longitud arrays
     inicializar(); //Inicializa los dos arreglos
-
-    if (T/2 < 1){
-        printf(stderr, "El numero de procesos debe de ser par");
-        return 1;
-    }
     
     double timetick = dwalltime();
 
@@ -191,21 +194,4 @@ double dwalltime()
 	gettimeofday(&tv,NULL);
 	sec = tv.tv_sec + tv.tv_usec/1000000.0;
 	return sec;
-}
-
-/*___________MATH_________*/
-int logaritmo2(int x){
-    int aux = x;
-    int result = 0;
-    while(aux>>=1)
-        result++;
-}
-
-/*__________PRINT_________*/
-void* printArray(int* array){
-    printf("{ ");
-    for(int i=0;i<length;i++){
-        printf("%d; ",array[i]);
-    }
-    printf("}\n");
 }

@@ -21,6 +21,11 @@ int compare(int, int);
 
 int main(int argc, char* argv[]){
 
+    if (atoi(argv[1]) <= 0){
+        printf("El tamano del array debe de ser mayor a 1\n");
+        return 1;
+    }
+
     N = atoi(argv[1]); // 2^N
     length = (1<<N); //longitud arrays
     inicializar();
