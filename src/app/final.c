@@ -36,7 +36,7 @@ int main(int argc, char* argv[]){
     pthread_t misThreads[T];
     length = (1<<N); //longitud arrays
     inicializar();
-
+    
     double timetick = dwalltime();
 
     for(int id=0;id<T;id++){
@@ -131,7 +131,7 @@ void* divideAndConquer(void *arg){
 
     parte=length/T;
     inicio = parte*tid;
-    limite = parte*tid+parte;
+    limite = parte*tid+parte-1;
     if(compare(inicio,limite)){
         pthread_mutex_lock(&compareMutex);
         compareResult = 1;
@@ -150,8 +150,14 @@ void* inicializar(void){
     //inicializamos A
     for(i=0;i<length;i++){
         A[i] = rand() % 1024;
-        B[length-i-1] = A[i];
+        B[length-i-1] = A[i]; //simulo desordenados
     }
+    //repetimos elementos (numero 10 => nuestra nota)
+    A[0]= 10;
+    A[length-1]= 10;
+    B[0]= 10;
+    B[length-1]= 10;
+
     for(i=0;i<(T/2);i++){
         pthread_barrier_init(&barreraMerge[i], NULL, 2);
     }
