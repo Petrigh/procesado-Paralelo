@@ -72,8 +72,12 @@ int main(int argc, char** argv){
         for(int j=0; j<nrProcesos; j++){
             if(j%(1<<k)){
                 counts[j] = 0;
+                free(parteA);
+                free(parteB);
             }else{
                 counts[j] = (N/nrProcesos)*(1<<k);
+                parteA = (int*)realloc(sizeof(int)*(N/nrProcesos)*(1<<k));
+                parteB = (int*)realloc(sizeof(int)*(N/nrProcesos)*(1<<k));
             }
         }
         /*
@@ -88,11 +92,21 @@ int main(int argc, char** argv){
 
         counts = { 20, 0, 0, 0, 20, 0, 0, 0, 0 }
         displacement = { 0, X, X, X, 20, X, X, X, }
+
+        int MPI_Scatterv(const void* buffer_send,
+                 const int counts_send[],
+                 const int displacements[],
+                 MPI_Datatype datatype_send,
+                 void* buffer_recv,
+                 int count_recv,
+                 MPI_Datatype datatype_recv,
+                 int root,
+                 MPI_Comm communicator);
         */
 
         // Se distribuye los arreglos entre los procesos
-        MPI_Scatter(A, N/nrProcesos, MPI_INT, parteA, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Scatter(B, N/nrProcesos, MPI_INT, parteB, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Scatterv(A, counts, displacements, MPI_INT, parteA, (N/nrProcesos)*(1<<k), MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Scatterv(B, counts, displacements, MPI_INT, parteB, (N/nrProcesos)*(1<<k), MPI_INT, 0, MPI_COMM_WORLD);
 
         // Ordena cada arreglo asignado
         mergesort(parteA, N/nrProcesos);
@@ -101,7 +115,6 @@ int main(int argc, char** argv){
         // Se obtiene cada parte de cada arreglo ordenado y se adjunta a los arreglos originales
         MPI_Gather(parteA, N/nrProcesos, MPI_INT, A, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Gather(parteB, N/nrProcesos, MPI_INT, B, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
-        wait(terminaron);
 
     }
     // Procedo a ordenar cada parte 
