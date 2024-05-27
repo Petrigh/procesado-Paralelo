@@ -8,6 +8,7 @@ double dwalltime();
 void* inicializar();
 void* mergesort(int*, int);
 void* sort(int*, int, int);
+int comparar(int*, int*, int);
 
 /*__________MAIN____________*/
 int main(int argc, char** argv){
@@ -18,8 +19,8 @@ int main(int argc, char** argv){
     int *B; // Arreglo B (segundo arreglo)
     int *parteA; // Parte del arreglo A que le corresponde a cada proceso
     int *parteB; // Parte del arreglo B que le corresponde a cada proceso
-    int *ordenadoA; // Arreglo ordenado por parte
-    int *ordenadoB; // Arreglo ordenado por parte
+    int *comparaciones; // Arreglo que recorre las comparaciones de todos los procesos
+    int comparacion = 1; // Valor de comparacion de cada proceso
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank( MPI_COMM_WORLD, &miID);
@@ -45,10 +46,13 @@ int main(int argc, char** argv){
     parteA = (int*)malloc(sizeof(int)*N/nrProcesos);
     parteB = (int*)malloc(sizeof(int)*N/nrProcesos);
 
+    //
+
     if (miID == 0){
-        // Defino los arreglos a comparar
+        // Defino los arreglos a comparar y el arreglo de las comparaciones
         A = (int*)malloc(sizeof(int)*N);
         B = (int*)malloc(sizeof(int)*N);
+        comparaciones = (int*)malloc(sizeof(int)*nrProcesos);
 
         inicializar(A,B,N); // Inicializo los dos arreglos
         
@@ -111,10 +115,41 @@ int main(int argc, char** argv){
         MPI_Gatherv(parteB, N/nrProcesos, MPI_INT, B, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
 
     }
-    // Procedo a ordenar cada parte 
-    if (miID == 0){
-        
+    
+    MPI_Barrier(MPI_COOM_WORLD);
+
+    parteA = (int*)realloc(sizeof(int)*(N/nrProcesos));
+    parteB = (int*)realloc(sizeof(int)*(N/nrProcesos));
+    MPI_Scatterv(A, N/nrProcesos, MPI_INT, parteA, (N/nrProcesos), MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatterv(B, N/nrProcesos, MPI_INT, parteB, (N/nrProcesos), MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatterv(comparaciones, nrProcesos, MPI_INT, comparacion, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    comparacion = comparar(parteA, parteB, (N/nrProcesos));
+
+    MPI_Gather(comparacion, 1, MPI_INT, comparaciones, nrProcesos, MPI_INT, 0, MPI_WORLD);
+
+    if ( miID == 0){
+        comparacion = 1;
+        for(int i = 0; i < nrProcesos; i++){
+            if (comparaciones[i] == 0){
+                comparacion = 0;
+                break;
+            }
+        }
+        printf("Tiempo de ejecucion: %fs \n", dwalltime() - timetick);
+
+        if(comparacion)
+            printf("Los arreglos son distintos\n");
+        else
+            printf("Los arreglos son iguales\n");
+
+        free(A);
+        free(B);
+        free(comparaciones);
     }
+
+    free(parteA);
+    free(parteB);
 
     MPI_Finalize();
     return(0);
@@ -175,4 +210,14 @@ void* sort(int* array, int left, int right){
         array[left + k] = temp[k];
         k--;
     }
+}
+
+/*__________________COMPARE______________________*/
+int comparar(int A, int B, int N){
+    for(int i=0 ;i < N ;i++){
+        if(A[i] != B[i]){
+            return 0;
+        }
+    }
+    return 1;
 }

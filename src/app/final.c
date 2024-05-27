@@ -62,9 +62,6 @@ int main(int argc, char* argv[]){
     finalizar();
     return 0;
 }
-/*
-|A______________| |B______________|
-*/
 
 /*__________________COMPARE______________________*/
 int compare(int left, int right){
@@ -75,6 +72,7 @@ int compare(int left, int right){
     }
     return 0;
 }
+
 /*_________________MERGE SORT___________________*/
 void* mergesort(int* array, int left, int right, int fase){
     int longitud = right-left;
@@ -192,6 +190,7 @@ double dwalltime()
 	sec = tv.tv_sec + tv.tv_usec/1000000.0;
 	return sec;
 }
+
 
 /*___________MATH_________*/
 int logaritmo2(int x){
