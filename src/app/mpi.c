@@ -39,7 +39,7 @@ int main(int argc, char** argv){
         MPI_Finalize();
         return 1;
     } else {
-        N = atoi(argv[1]);
+        N = 1<<atoi(argv[1]);
     }
 
     // Defino los arreglos locales a cada proceso
@@ -60,7 +60,7 @@ int main(int argc, char** argv){
         
         double timetick = dwalltime(); // Empiezo el calculo del tiempo en ejecutar
     }
-    int maxFases = 0;
+    int maxFases = atoi(argv[1])+1;
     int counts[nrProcesos];
     int displacements[nrProcesos];
     for(int i= 0; i<nrProcesos;i++){
@@ -116,7 +116,7 @@ int main(int argc, char** argv){
 
     }
     
-    MPI_Barrier(MPI_COOM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 
     parteA = (int*)realloc(sizeof(int)*(N/nrProcesos));
     parteB = (int*)realloc(sizeof(int)*(N/nrProcesos));
@@ -139,9 +139,9 @@ int main(int argc, char** argv){
         printf("Tiempo de ejecucion: %fs \n", dwalltime() - timetick);
 
         if(comparacion)
-            printf("Los arreglos son distintos\n");
-        else
             printf("Los arreglos son iguales\n");
+        else
+            printf("Los arreglos son distintos\n");
 
         free(A);
         free(B);
@@ -171,12 +171,8 @@ void* inicializar(int* A, int* B, int N){
     int i;
     // Asigno un elemento aleatorio al primer arreglo (A)
     for(i = 0; i < N, i++){
-        A[i] = rand();
-    }
-    // Asigno los mismos elementos al segundo arreglo (B)
-    for (i = 0; i < N; i++)
-    {
-        A[i] = B[i];
+        A[i] = rand() % 1200;
+        B[i] = A[i];
     }
 }
 
