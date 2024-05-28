@@ -9,7 +9,7 @@ int* TempB;
 int N;
 int T;
 int numThread;
-unsigned long length;
+unsigned long long length;
 pthread_barrier_t* barreraMerge;
 pthread_barrier_t barreraCompare;
 pthread_mutex_t compareMutex;
@@ -25,9 +25,9 @@ double dwalltime();
 void printArrays(int, int, int);
 int inicializar(void);
 void* finalizar(void);
-void* mergesort(int*, int*, int, int, int);
-void* sort(int*, int*, int, int);
-int compare(int, int);
+void* mergesort(int*, int*, unsigned long long a, unsigned long long b, unsigned long long c);
+void* sort(int*, int*, unsigned long long a, unsigned long long b);
+int compare(unsigned long long a, unsigned long long b);
 void* divideAndConquer(void*);
 
 int main(int argc, char* argv[]){
@@ -70,8 +70,8 @@ int main(int argc, char* argv[]){
 }
 
 /*__________________COMPARE______________________*/
-int compare(int left, int right){
-    for(int i=left;i<right;i++){
+int compare(unsigned long long left, unsigned long long right){
+    for(unsigned long long i=left;i<right;i++){
         if(A[i] != B[i]){
             return 1;
         }
@@ -80,7 +80,7 @@ int compare(int left, int right){
 }
 
 /*_________________MERGE SORT___________________*/
-void* mergesort(int* array, int* temp, int left, int right, int fase){
+void* mergesort(int* array, int* temp, unsigned long long left, unsigned long long right, unsigned long long fase){
     int longitud = right-left;
     int floor, offset;
     for(offset=fase;offset<=longitud;offset=offset*2){ //arma paquetes de 2; 4; ...; n/2 elementos
@@ -90,7 +90,7 @@ void* mergesort(int* array, int* temp, int left, int right, int fase){
     }
 }
 
-void* sort(int* array, int* Temp, int left, int right){
+void* sort(int* array, int* Temp, unsigned long long left, unsigned long long right){
     int middle = ((right - left)/2) + left;
     int i=left, j=middle, k=left;
     while(i<middle && j<right){
@@ -111,15 +111,15 @@ void* sort(int* array, int* Temp, int left, int right){
 /*__________SCHEDULER________________*/
 void* divideAndConquer(void *arg){
     int tid=*(int*)arg;
-    int parte = length/numThread;
-    int inicio, limite;
-    int fase=0;
-    int offset = 2;
+    unsigned long long parte = length/numThread;
+    unsigned long long inicio, limite;
+    unsigned long long fase=0;
+    unsigned long long offset = 2;
     while(parte<=length){
         inicio = parte*((tid)%numThread);
         limite = parte*((tid)%numThread)+parte;
 
-        if(tid<numThread){
+        if(tid<0){
             mergesort(A, TempA, inicio,limite,offset);
         }else{
             mergesort(B, TempB, inicio,limite,offset);
@@ -155,15 +155,15 @@ int inicializar(void){
     TempA = (int*)malloc(sizeof(int)*(length));
     TempB = (int*)malloc(sizeof(int)*(length));
 
-    if (A == NULL || B == NULL || TempA == NULL || TempB == NULL) 
+    barreraMerge = (pthread_barrier_t*)malloc(sizeof(pthread_barrier_t)*(numThread));
+    if (A == NULL || B == NULL || TempA == NULL || TempB == NULL || barreraMerge == NULL) 
         return 1;
-    barreraMerge = (pthread_barrier_t*)malloc(sizeof(pthread_barrier_t)*(T/2));
-    //inicializamos A
+
     for(i=0;i<length;i++){
         A[i] = rand() % (length/2); //siempre habran repetidos
-        B[length-i-1] = A[i]; //simulo desordenados
+        B[length-i-1] = A[i]; //simulo desorden
     }
-    for(i=0;i<(T/2);i++){
+    for(i=0;i<(numThread);i++){
         pthread_barrier_init(&barreraMerge[i], NULL, 2);
     }
     pthread_barrier_init(&barreraCompare, NULL, T);
@@ -174,13 +174,14 @@ int inicializar(void){
 void* finalizar(void){
     pthread_mutex_destroy(&compareMutex);
     pthread_barrier_destroy(&barreraCompare);
-    for(int i=0;i<(T/2);i++){
+    for(int i=0;i<(numThread);i++){
         pthread_barrier_destroy(&barreraMerge[i]);
     }
     free(A);
     free(B);
     free(TempA);
     free(TempB);
+    free(barreraMerge);
 }
 
 /*_____________TIME______________*/
