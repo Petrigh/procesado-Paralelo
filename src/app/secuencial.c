@@ -3,6 +3,7 @@
 
 int* A;
 int* B;
+int* temp;
 int N;
 unsigned long length;
 
@@ -31,8 +32,8 @@ int main(int argc, char* argv[]){
     inicializar();
     
     double timetick = dwalltime();
+    
     mergesort(A,0,length,2);
-    mergesort(B,0,length,2);
     int compareResult = compare(0,length);
 
     printf("Tiempo de ejecucion: %fs \n", dwalltime() - timetick);
@@ -71,7 +72,7 @@ void* mergesort(int* array, int left, int right, int fase){
 void* sort(int* array, int left, int right){
     int middle = ((right - left)/2) + left;
     int i=left, j=middle, k=0;
-    int temp[right-left];
+    temp = (int*)realloc(temp,sizeof(int)*(right-left));
     while(i<middle && j<right){
         if(array[i] <= array[j])
             temp[k++] = array[i++];
@@ -96,6 +97,7 @@ void* inicializar(void){
     //alocamos matrices en heap
     A = (int*)malloc(sizeof(int)*(length));
     B = (int*)malloc(sizeof(int)*(length));
+    temp = (int*)malloc(sizeof(int)*(2));
     //inicializamos A
     for(i=0;i<length;i++){
         A[i] = rand() % 1024;

@@ -90,7 +90,7 @@ void* mergesort(int* array, int left, int right, int fase){
 void* sort(int* array, int left, int right){
     int middle = ((right - left)/2) + left;
     int i=left, j=middle, k=0;
-    int temp[right-left];
+    int* temp = (int*)malloc(sizeof(int)*(right-left));
     while(i<middle && j<right){
         if(array[i] <= array[j])
             temp[k++] = array[i++];
