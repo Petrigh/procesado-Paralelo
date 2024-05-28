@@ -32,7 +32,6 @@ int compare(unsigned long long a, unsigned long long b);
 void* divideAndConquer(void*);
 
 int main(int argc, char* argv[]){
-    /*
     if (atoi(argv[1]) <= 0){
         printf("El tamano del array debe de ser mayor a 1\n");
         return 1;
@@ -42,9 +41,8 @@ int main(int argc, char* argv[]){
         printf("El numero de procesos debe de ser par mayor a 0\n");
         return 1;
     }
-    */
-    N = 10;//atoi(argv[1]); // 2^N
-    T = 8;//atoi(argv[2]); //cantidad de threads   comment: revisar 8 o mas threads en cluster
+    N = atoi(argv[1]); // 2^N
+    T = atoi(argv[2]); //cantidad de threads   comment: revisar 8 o mas threads en cluster
     int threads_ids[T];
     pthread_t misThreads[T];
     numThread = T/2; //una mitad para A[] y la otra para B[]
@@ -62,7 +60,6 @@ int main(int argc, char* argv[]){
         pthread_join(misThreads[id],NULL);
     }
     printf("Tiempo de ejecucion: %fs \n", dwalltime() - timetick);
-    //printArrays(0,length,length);
 
     if(compareResult)
         printf("Los arreglos son distintos\n");
