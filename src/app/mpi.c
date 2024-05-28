@@ -14,18 +14,20 @@ int comparar(int*, int*, int);
 int main(int argc, char** argv){
     int miID; // ID de cada proceso
     int nrProcesos; //Cantidad de procesos
-    int N; // Tamaño de los arreglo (2^N)
-    int *A; // Arreglo A (primer arreglo)
-    int *B; // Arreglo B (segundo arreglo)
-    int *parteA; // Parte del arreglo A que le corresponde a cada proceso
-    int *parteB; // Parte del arreglo B que le corresponde a cada proceso
-    int *comparaciones; // Arreglo que recorre las comparaciones de todos los procesos
+    int N = 0; // Tamaño de los arreglo (2^N)
+    int *A = NULL; // Arreglo A (primer arreglo)
+    int *B = NULL; // Arreglo B (segundo arreglo)
+    int *parteA = NULL; // Parte del arreglo A que le corresponde a cada proceso
+    int *parteB = NULL; // Parte del arreglo B que le corresponde a cada proceso
+    int *comparaciones = NULL; // Arreglo que recorre las comparaciones de todos los procesos
     int comparacion = 1; // Valor de comparacion de cada proceso
+    double timetick;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank( MPI_COMM_WORLD, &miID);
     MPI_Comm_size(MPI_COMM_WORLD, &nrProcesos);
 
+    
     if (nrProcesos % 2 != 0){ // Verifica si el numero de procesos es par
         fprintf(stderr, "El numero de procesos debe de ser par");
         MPI_Finalize();
@@ -34,19 +36,26 @@ int main(int argc, char** argv){
 
     if (argc != 2){ // Verifica si se obtuvo el tamaño del arreglo por parametro
         if (miID == 0){
-            fprintf(stderr, "Falta definir el tamaño del arreglo")
+            fprintf(stderr, "Falta definir el tamaño del arreglo");
         }
         MPI_Finalize();
         return 1;
     } else {
         N = 1<<atoi(argv[1]);
     }
+    
 
     // Defino los arreglos locales a cada proceso
     parteA = (int*)malloc(sizeof(int)*N/nrProcesos);
     parteB = (int*)malloc(sizeof(int)*N/nrProcesos);
+    
 
-    //
+    /*
+    // Asignar suficiente memoria para la fase más grande
+    int maxPhaseSize = N / nrProcesos * (1 << (atoi(argv[1])));
+    parteA = (int*)malloc(sizeof(int) * maxPhaseSize);
+    parteB = (int*)malloc(sizeof(int) * maxPhaseSize);
+    */
 
     if (miID == 0){
         // Defino los arreglos a comparar y el arreglo de las comparaciones
@@ -54,29 +63,35 @@ int main(int argc, char** argv){
         B = (int*)malloc(sizeof(int)*N);
         comparaciones = (int*)malloc(sizeof(int)*nrProcesos);
 
+        srand(time(NULL));
+
         inicializar(A,B,N); // Inicializo los dos arreglos
         
-        B[N-1] = A[0]// Modifico un elemento de los arreglos para hacerlos diferentes
+        B[N-1] = A[0];// Modifico un elemento de los arreglos para hacerlos diferentes
         
-        double timetick = dwalltime(); // Empiezo el calculo del tiempo en ejecutar
+        timetick = dwalltime(); // Empiezo el calculo del tiempo en ejecutar
     }
+
     int maxFases = atoi(argv[1])+1;
     int counts[nrProcesos];
     int displacements[nrProcesos];
+
     for(int i= 0; i<nrProcesos;i++){
-        displacements[i] = (N/nrProcesos)*i
+        displacements[i] = (N/nrProcesos)*i;
     }
+
     for(int k=0;k<maxFases;k++){
         for(int j=0; j<nrProcesos; j++){
             if(j%(1<<k)){
                 counts[j] = 0;
-                free(parteA);
-                free(parteB);
             }else{
                 counts[j] = (N/nrProcesos)*(1<<k);
-                parteA = (int*)realloc(sizeof(int)*(N/nrProcesos)*(1<<k));
-                parteB = (int*)realloc(sizeof(int)*(N/nrProcesos)*(1<<k));
             }
+        }
+
+        if (counts[miID] == 0){
+            parteA = (int*)realloc(parteA, sizeof(int)*(N/nrProcesos)*(1<<k));
+            parteB = (int*)realloc(parteB, sizeof(int)*(N/nrProcesos)*(1<<k));
         }
         /*
         A[N] = { X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X ,X, X, X, X, X }
@@ -90,69 +105,66 @@ int main(int argc, char** argv){
 
         counts = { 20, 0, 0, 0, 20, 0, 0, 0, 0 }
         displacement = { 0, X, X, X, 20, X, X, X, }
-
-        int MPI_Scatterv(const void* buffer_send,
-                 const int counts_send[],
-                 const int displacements[],
-                 MPI_Datatype datatype_send,
-                 void* buffer_recv,
-                 int count_recv,
-                 MPI_Datatype datatype_recv,
-                 int root,
-                 MPI_Comm communicator);
         */
-
+        
         // Se distribuye los arreglos entre los procesos
         MPI_Scatterv(A, counts, displacements, MPI_INT, parteA, (N/nrProcesos)*(1<<k), MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Scatterv(B, counts, displacements, MPI_INT, parteB, (N/nrProcesos)*(1<<k), MPI_INT, 0, MPI_COMM_WORLD);
 
         // Ordena cada arreglo asignado
+        /*
         mergesort(parteA, (N/nrProcesos)*(1<<k));
         mergesort(parteB, (N/nrProcesos)*(1<<k));
+        */
+        mergesort(parteA, counts[miID]);
+        mergesort(parteB, counts[miID]);
+        
 
         // Se obtiene cada parte de cada arreglo ordenado y se adjunta a los arreglos originales
-        MPI_Gatherv(parteA, N/nrProcesos, MPI_INT, A, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Gatherv(parteB, N/nrProcesos, MPI_INT, B, N/nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Gatherv(parteA, (N/nrProcesos)*(1<<k), MPI_INT, A, counts, displacements, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Gatherv(parteB, (N/nrProcesos)*(1<<k), MPI_INT, B, counts, displacements, MPI_INT, 0, MPI_COMM_WORLD);
 
     }
     
     MPI_Barrier(MPI_COMM_WORLD);
 
-    parteA = (int*)realloc(sizeof(int)*(N/nrProcesos));
-    parteB = (int*)realloc(sizeof(int)*(N/nrProcesos));
-    MPI_Scatterv(A, N/nrProcesos, MPI_INT, parteA, (N/nrProcesos), MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Scatterv(B, N/nrProcesos, MPI_INT, parteB, (N/nrProcesos), MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Scatterv(comparaciones, nrProcesos, MPI_INT, comparacion, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    /*
+    parteA = (int*)realloc(parteA, sizeof(int)*(N/nrProcesos));
+    parteB = (int*)realloc(parteB, sizeof(int)*(N/nrProcesos));
+    MPI_Scatter(A, N/nrProcesos, MPI_INT, parteA, (N/nrProcesos), MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatter(B, N/nrProcesos, MPI_INT, parteB, (N/nrProcesos), MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatter(comparaciones, nrProcesos, MPI_INT, comparacion, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     comparacion = comparar(parteA, parteB, (N/nrProcesos));
 
-    MPI_Gather(comparacion, 1, MPI_INT, comparaciones, nrProcesos, MPI_INT, 0, MPI_WORLD);
-
+    MPI_Gather(comparacion, 1, MPI_INT, comparaciones, nrProcesos, MPI_INT, 0, MPI_COMM_WORLD);
+    */
     if ( miID == 0){
+        /*
         comparacion = 1;
         for(int i = 0; i < nrProcesos; i++){
             if (comparaciones[i] == 0){
                 comparacion = 0;
                 break;
             }
-        }
+        } */
         printf("Tiempo de ejecucion: %fs \n", dwalltime() - timetick);
-
+        /*
         if(comparacion)
             printf("Los arreglos son iguales\n");
         else
             printf("Los arreglos son distintos\n");
-
+        */
         free(A);
         free(B);
         free(comparaciones);
-    }
-
+    }   
+    
     free(parteA);
     free(parteB);
 
     MPI_Finalize();
-    return(0);
+    return 0;
 }
 
 /*_________TIME____________*/ 
@@ -168,9 +180,8 @@ double dwalltime(){
 
 /*____________INITIALIZER_____________*/
 void* inicializar(int* A, int* B, int N){
-    int i;
     // Asigno un elemento aleatorio al primer arreglo (A)
-    for(i = 0; i < N, i++){
+    for(int i = 0; i < N; i++){
         A[i] = rand() % 1200;
         B[i] = A[i];
     }
@@ -209,11 +220,13 @@ void* sort(int* array, int left, int right){
 }
 
 /*__________________COMPARE______________________*/
-int comparar(int A, int B, int N){
-    for(int i=0 ;i < N ;i++){
+int comparar(int* A, int* B, int N){
+    int C = 1;
+    for(int i=0; i < N; i++){
         if(A[i] != B[i]){
-            return 0;
+            C = 0;
+            break;
         }
     }
-    return 1;
+    return C;
 }
