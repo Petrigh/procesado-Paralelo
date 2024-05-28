@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <math.h>
 
 int* A;
 int* B;
@@ -10,7 +11,7 @@ int N;
 int T;
 int numThread;
 unsigned long long length;
-pthread_barrier_t* barreraMerge;
+pthread_barrier_t* barreraEtapa;
 pthread_barrier_t barreraCompare;
 pthread_mutex_t compareMutex;
 int compareResult = 0;
@@ -22,7 +23,7 @@ si solo corro el comando ./script.sh va a correr el comando en el front
 */
 
 double dwalltime();
-void printArrays(int, int, int);
+void printArrays(unsigned long long, unsigned long long, unsigned long long);
 int inicializar(void);
 void* finalizar(void);
 void* mergesort(int*, int*, unsigned long long a, unsigned long long b, unsigned long long c);
@@ -31,6 +32,7 @@ int compare(unsigned long long a, unsigned long long b);
 void* divideAndConquer(void*);
 
 int main(int argc, char* argv[]){
+    /*
     if (atoi(argv[1]) <= 0){
         printf("El tamano del array debe de ser mayor a 1\n");
         return 1;
@@ -40,8 +42,9 @@ int main(int argc, char* argv[]){
         printf("El numero de procesos debe de ser par mayor a 0\n");
         return 1;
     }
-    N = atoi(argv[1]); // 2^N
-    T = atoi(argv[2]); //cantidad de threads   comment: revisar 8 o mas threads en cluster
+    */
+    N = 10;//atoi(argv[1]); // 2^N
+    T = 8;//atoi(argv[2]); //cantidad de threads   comment: revisar 8 o mas threads en cluster
     int threads_ids[T];
     pthread_t misThreads[T];
     numThread = T/2; //una mitad para A[] y la otra para B[]
@@ -59,6 +62,7 @@ int main(int argc, char* argv[]){
         pthread_join(misThreads[id],NULL);
     }
     printf("Tiempo de ejecucion: %fs \n", dwalltime() - timetick);
+    //printArrays(0,length,length);
 
     if(compareResult)
         printf("Los arreglos son distintos\n");
@@ -112,23 +116,23 @@ void* sort(int* array, int* Temp, unsigned long long left, unsigned long long ri
 void* divideAndConquer(void *arg){
     int tid=*(int*)arg;
     unsigned long long parte = length/numThread;
-    unsigned long long inicio, limite;
-    unsigned long long fase=0;
+    unsigned long long inicio = parte*((tid)%numThread);
+    unsigned long long limite;
+    unsigned long long fase=1;
     unsigned long long offset = 2;
     while(parte<=length){
-        inicio = parte*((tid)%numThread);
-        limite = parte*((tid)%numThread)+parte;
+        limite = inicio+parte;
 
-        if(tid<0){
+        if(tid<numThread){
             mergesort(A, TempA, inicio,limite,offset);
         }else{
             mergesort(B, TempB, inicio,limite,offset);
         }
-        pthread_barrier_wait(&barreraMerge[(tid/(1<<(fase+1)))]);
-        if (tid % (1 << (fase + 1)) != 0) {
+        pthread_barrier_wait(&barreraEtapa[(int)log2(fase)]);
+        if (tid % (1 << (fase)) != 0) {
             break; //los threads ociosos salen
         }
-        (fase) ? (fase = fase<<1) : (fase = 1);
+        fase = fase<<1;
         offset = parte;
         parte = parte<<1;
     }
@@ -155,17 +159,18 @@ int inicializar(void){
     TempA = (int*)malloc(sizeof(int)*(length));
     TempB = (int*)malloc(sizeof(int)*(length));
 
-    barreraMerge = (pthread_barrier_t*)malloc(sizeof(pthread_barrier_t)*(numThread));
-    if (A == NULL || B == NULL || TempA == NULL || TempB == NULL || barreraMerge == NULL) 
+    barreraEtapa = (pthread_barrier_t*)malloc(sizeof(pthread_barrier_t)*(log2(T)));
+    if (A == NULL || B == NULL || TempA == NULL || TempB == NULL || barreraEtapa == NULL) 
         return 1;
 
     for(i=0;i<length;i++){
         A[i] = rand() % (length/2); //siempre habran repetidos
         B[length-i-1] = A[i]; //simulo desorden
     }
-    for(i=0;i<(numThread);i++){
-        pthread_barrier_init(&barreraMerge[i], NULL, 2);
-    }
+
+    for(i=0;i<log2(T);i++)
+        pthread_barrier_init(&barreraEtapa[i], NULL, T/(1<<i));
+
     pthread_barrier_init(&barreraCompare, NULL, T);
     pthread_mutex_init(&compareMutex, NULL);
     return 0;
@@ -174,14 +179,14 @@ int inicializar(void){
 void* finalizar(void){
     pthread_mutex_destroy(&compareMutex);
     pthread_barrier_destroy(&barreraCompare);
-    for(int i=0;i<(numThread);i++){
-        pthread_barrier_destroy(&barreraMerge[i]);
+    for(int i=0;i<(log2(T));i++){
+        pthread_barrier_destroy(&barreraEtapa[i]);
     }
     free(A);
     free(B);
     free(TempA);
     free(TempB);
-    free(barreraMerge);
+    free(barreraEtapa);
 }
 
 /*_____________TIME______________*/
@@ -197,7 +202,7 @@ double dwalltime()
 	return sec;
 }
 
-void printArrays(int start, int end, int length){
+void printArrays(unsigned long long start, unsigned long long end, unsigned long long length){
 
     printf("A[%d]={ ",length);
     for(int i=start;i<end-1;i++)
@@ -208,14 +213,4 @@ void printArrays(int start, int end, int length){
     for(int i=start;i<end-1;i++)
         printf("%d;",B[i]);
     printf("%d }\n",B[end-1]);
-
-    printf("T[%d]={ ",length);
-    for(int i=start;i<end-1;i++)
-        printf("%d;",TempA[i]);
-    printf("%d }\n\n",TempA[end-1]);
-
-    printf("U[%d]={ ",length);
-    for(int i=start;i<end-1;i++)
-        printf("%d;",TempB[i]);
-    printf("%d }\n\n",TempB[end-1]);
 }
