@@ -11,7 +11,8 @@ int N;
 int T;
 int numThread;
 unsigned long long length;
-pthread_barrier_t* barreraEtapa;
+pthread_barrier_t* barreraEtapaA;
+pthread_barrier_t* barreraEtapaB;
 pthread_barrier_t barreraCompare;
 pthread_mutex_t compareMutex;
 int compareResult = 0;
@@ -122,10 +123,11 @@ void* divideAndConquer(void *arg){
 
         if(tid<numThread){
             mergesort(A, TempA, inicio,limite,offset);
+            pthread_barrier_wait(&barreraEtapaA[(int)log2(fase)]);
         }else{
             mergesort(B, TempB, inicio,limite,offset);
+            pthread_barrier_wait(&barreraEtapaB[(int)log2(fase)]);
         }
-        pthread_barrier_wait(&barreraEtapa[(int)log2(fase)]);
         if (tid % (1 << (fase)) != 0) {
             break; //los threads ociosos salen
         }
@@ -156,8 +158,9 @@ int inicializar(void){
     TempA = (int*)malloc(sizeof(int)*(length));
     TempB = (int*)malloc(sizeof(int)*(length));
 
-    barreraEtapa = (pthread_barrier_t*)malloc(sizeof(pthread_barrier_t)*(log2(T)));
-    if (A == NULL || B == NULL || TempA == NULL || TempB == NULL || barreraEtapa == NULL) 
+    barreraEtapaA = (pthread_barrier_t*)malloc(sizeof(pthread_barrier_t)*(log2(T)));
+    barreraEtapaB = (pthread_barrier_t*)malloc(sizeof(pthread_barrier_t)*(log2(T)));
+    if (A == NULL || B == NULL || TempA == NULL || TempB == NULL || barreraEtapaA == NULL || barreraEtapaB == NULL) 
         return 1;
 
     for(i=0;i<length;i++){
@@ -165,8 +168,10 @@ int inicializar(void){
         B[length-i-1] = A[i]; //simulo desorden
     }
 
-    for(i=0;i<log2(T);i++)
-        pthread_barrier_init(&barreraEtapa[i], NULL, T/(1<<i));
+    for(i=0;i<log2(T);i++){
+        pthread_barrier_init(&barreraEtapaA[i], NULL, numThread/(1<<i));
+        pthread_barrier_init(&barreraEtapaB[i], NULL, numThread/(1<<i));
+    }
 
     pthread_barrier_init(&barreraCompare, NULL, T);
     pthread_mutex_init(&compareMutex, NULL);
@@ -177,13 +182,15 @@ void* finalizar(void){
     pthread_mutex_destroy(&compareMutex);
     pthread_barrier_destroy(&barreraCompare);
     for(int i=0;i<(log2(T));i++){
-        pthread_barrier_destroy(&barreraEtapa[i]);
+        pthread_barrier_destroy(&barreraEtapaA[i]);
+        pthread_barrier_destroy(&barreraEtapaA[i]);
     }
     free(A);
     free(B);
     free(TempA);
     free(TempB);
-    free(barreraEtapa);
+    free(barreraEtapaA);
+    free(barreraEtapaB);
 }
 
 /*_____________TIME______________*/
