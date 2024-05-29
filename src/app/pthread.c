@@ -208,12 +208,12 @@ double dwalltime()
 
 void printArrays(unsigned long long start, unsigned long long end, unsigned long long length){
 
-    printf("A[%d]={ ",length);
+    printf("A[%llu]={ ",length);
     for(int i=start;i<end-1;i++)
         printf("%d;",A[i]);
     printf("%d }\n",A[end-1]);
 
-    printf("B[%d]={ ",length);
+    printf("B[%llu]={ ",length);
     for(int i=start;i<end-1;i++)
         printf("%d;",B[i]);
     printf("%d }\n",B[end-1]);
