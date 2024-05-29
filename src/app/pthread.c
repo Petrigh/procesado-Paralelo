@@ -61,6 +61,7 @@ int main(int argc, char* argv[]){
         pthread_join(misThreads[id],NULL);
     }
     printf("Tiempo de ejecucion: %fs \n", dwalltime() - timetick);
+    printArrays(0,length,length);
 
     if(compareResult)
         printf("Los arreglos son distintos\n");
@@ -120,21 +121,23 @@ void* divideAndConquer(void *arg){
     unsigned long long offset = 2;
     while(parte<=length){
         limite = inicio+parte;
-
         if(tid<numThread){
+            //printf("Thread %d atendiendo A[%llu-%llu] en fase %.0f\n",tid,inicio,limite,log2(fase));
             mergesort(A, TempA, inicio,limite,offset);
             pthread_barrier_wait(&barreraEtapaA[(int)log2(fase)]);
         }else{
+            //printf("Thread %d atendiendo B[%llu-%llu] en fase %.0f\n",tid,inicio,limite,log2(fase));
             mergesort(B, TempB, inicio,limite,offset);
             pthread_barrier_wait(&barreraEtapaB[(int)log2(fase)]);
         }
-        if (tid % (1 << (fase)) != 0) {
+        fase = fase<<1;
+        if (tid % fase != 0) {
             break; //los threads ociosos salen
         }
-        fase = fase<<1;
         offset = parte;
         parte = parte<<1;
     }
+    printf("Thread %d rompio en %d mod %d esperando en fase %.0f\n",tid,tid, 1 << (fase),log2(fase));
     pthread_barrier_wait(&barreraCompare);
 
     parte=length/T;
