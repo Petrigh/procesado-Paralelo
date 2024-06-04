@@ -1,159 +1,51 @@
-# RobotAutonomoUNLP
+# Parallel Algorithms
 
-<p align="center">
-  <img width="400" src="https://github.com/InfinioKneza/RobotAutonomoUNLP/blob/master/blob/master/robot/robot-cover.jpg" alt="Autonomous robot cover image">
-</p>
-
-Initial project of an autonomous robot led by a group of students from the Real-Time Systems course at UNLP (National University of La Plata).
+Parallel algorithms in C for numeric sorting using multithreading techniques in distributed and shared memory systems
 
 ## Overview
-This project consists of a tri-wheeled robot that uses the ROS framework to process scripts and move making geometric figures with its path, also implementing a control system so the movement is smooth and syncronized.
+This project consists of 2 optimized algorithms that sort 2 arrays of numbers in ascending order and then checks if they contain the same numbers.
+Each algorithm tackles the challange with a different architectur in mind, one with a shared memory system using Pthreads, and the other in a distributed memory enviroment, where MPI was used.
+Both algorithms were run and tested in a cluster located in UNLP's computer science faculty.
 
 ## Getting Started
 
-- [Connection Instructions](#connection-instructions)
-- [Remote Access](#remote-access)
-- [Robot Initialization](#robot-initialization)
+- [Running the algorithms](#running)
 - [Taking the Robot Home](#taking-home)
 - [Contributing](#contributing)
 - [LICENSE](#license)
 
-### Connection Instructions
-<a name="connection-instructions"></a>
+### Running the algorithms
+<a name="running"></a>
 
-For the first iteration of the project, the robot needs to be connected to two 220V power outlets, one using the power jack that is installed on a step down transformer, the second outlet is for the Raspberry Pi 4 that uses an USB C connector.
+All algorithms are located in the src/app/ direcotry.
 
-### Remote Access
-<a name="remote-access"></a>
+#### Pthread
 
-Once all powered up, the robot will automatically connect to the univerity's wireless local area network.
-To access it the user must be connected to the same Wi-Fi network.
-<pre>
-  SSID: alumnosInfo
-  Password: Informatica2019
-</pre>
-
-You can now connect to the robot via ssh, for that you will need the robot ip address.
-We used the 3rd party mobile app [Fing](https://play.google.com/store/apps/details?id=com.overlook.android.fing&hl=es&gl=US) to recognise the Raspberry Pi device and figure out the ip address.
-
-With both previous steps done (Connect to UNLP Informatica Wi-Fi, and knowing device ip address), you can now access remotely via ssh.
-On your pcs vsCode, you can use the "Connect to Host" feature. Or you can do this on your pcs terminal.
-In either case, we recommend open 3 terminals and connect to the robot. If using vsCode, you can connect once and then instance more terminals from within.
-This is for an easier robot initialization after the connection.
-
-enter the following command:
+For running the shared memory architecture algorithm, the gcc compiler is needed, it already comes with pthread directives, so theres no need for extra package installations.
+We compile our code in the bin/ folder and we call the output 'pthread'
 
 ```
-$ ssh robotAutonomoUNLP@[IP ADDRESS]
+  $ gcc -pthread -o bin/pthread src/app/pthread.c
 ```
 
-After that you will be asked for a password, enter:
-<pre>
-  undertaker
-</pre>
-
-If its the first time you connect via ssh to the device, it will ask to trust it, please enter yes.
-
-### Robot Initialization
-<a name="robot-initialization"></a>
-
-Once inside the robot, to start making your own code routines or sending commands you must change directory to project workspace located at:
-
-<pre>
-  ~/robotAutonomoUNLP/locomotion_ws/src/locomotion_robot_pkg/src/
-</pre>
-
-The 3 terminals previously asked for are one for the actual initialization ([ROS Launch](#ros-launch)), one for running the robot ([ROS Run](#ros-run)), and one for an emergency stop ([Emergency](#ros-emergency)) in case its needed.
-The 3 should all be on the project's workspace
-
-#### ROS Launch
-<a name="ros-launch"></a>
-
-To start the robot please run the command. To reduce conflicts we recommend to wait at least 15 seconds before start running the robot (ROS Run) 
+Once compiled, 2 parameters must be passed to run the code, the size of the array will be 2 to the power of the number passed as the first parameter, while the second parameter is the number of threads used to solve the problem.
 
 ```
-  $ roslaunch locomotion_robot_pkg start.launch
+  $ ./bin/pthread <PowerOf2> <Threads>
 ```
 
-#### ROS Run
-<a name="ros-run"></a>
+#### MPI
+
+
+For running the distributed memory architecture algorithm, the mpicc compiler is needed.
+We compile our code in the bin/ folder and we call the output 'mpi'
 
 ```
- $ rosrun locomotion_robot_pkg locomotion_receptor.py [movement] [args] 
+  $ mpicc -o bin/mpi src/app/pthread.c
 ```
 
-| Parameter                     | Description                                               |
-|-------------------------------|-----------------------------------------------------------|
-| `test`                        | Moves forward, then backwards, then turns left, then right|
-| `line {length in cm}`         | Moves forward the ammount of cm specified                 |
-| `square {side lenght in cm}`  | Makes a square of side specified in cm as parameter       |
-
-#### Emergency
-<a name="ros-emergency"></a>
-
-```
- $ python3 emergency_stop.py 
-```
-
-## Taking the Robot Home
-<a name="taking-home"></a>
-
-In case any of the project participants need to take the robot home, and use it in their own Wi-Fi, the netplan configuration should be changed. Please read how to change this file and how YAML files should be written on.
-
-## Contributing
-<a name="contributing"></a>
-
-Thank you for considering contributing to this robot's code repository! Here are the steps to follow for making contributions:
-
-### Step 1: Fetch and Pull from the Repository
-
-Ensure that you have the latest changes by fetching and pulling from this repository into the robot local system.
-
-```bash
-# Fetch and pull the latest changes
-git fetch origin
-git pull origin master
-```
-
-### Step 2: Changing the Remote Repository
-
-As the code repository within the robot needs to point to a new remote repository, follow these commands to clone this repository and set up a new remote repository:
-
-Clone this repository to your local machine
-```bash
-git clone https://github.com/InfinioKneza/RobotAutonomoUNLP.git
-```
-
-Navigate into the cloned directory
-```bash
-cd your-robot-repo
-```
-
-Create a new repository on GitHub (if not created already) and get its URL
-
-Set the new remote URL for the repository in the robot
-```bash
-git remote set-url origin https://github.com/your-username/your-new-remote-repo.git
-```
-
-Verify the new remote URL
-```bash
-git remote -v
-```
-
-### Step 3: Make Changes and Push
-Make the necessary changes to the code within the robot and commit the changes using Git. Push the changes to the new remote repository:
-
-```bash
-# Add your changes
-git add .
-
-# Commit the changes
-git commit -m "Describe your changes here"
-
-# Push the changes to the new remote repository
-git push origin master
-```
+Once compiled, 1 parameter must be passed to run the code, the size of the array will be 2 to the power of the parameter.
+To run it, a configuration file is needed where one assing the number of nodes used in the cluster.
 
 ### LICENSE
 <a name="license"></a>
