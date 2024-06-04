@@ -21,7 +21,7 @@ int main(int argc, char** argv){
     int *tempB = NULL; // Arreglo temporal utilizado para hacer el merge en el arreglo B
     int comparacion_local = 1; // Valor de comparacion de cada proceso
     int comparacion_global = 1; // Valor final que tendra la comparacion
-    double timetick; //
+    double timetick; 
     int tamParte; // Definicion del tamaño que recibe cada parte
     int parteA; // Entero que se utiliza de desplazamiento para el arreglo A
     int parteB; // Entero que se utiliza de desplazamiento para el arreglo B
@@ -74,10 +74,6 @@ int main(int argc, char** argv){
         inicializar(A,B,N); // Inicializo los dos arreglos
         
         timetick = dwalltime(); // Empiezo el calculo del tiempo en ejecutar
-    } else {
-        // Defino los arreglos a comparar
-        //A = (int*)malloc(sizeof(int)*tamParte);
-        //B = (int*)malloc(sizeof(int)*tamParte);
     }
 
     // Empiezo con el arreglo A
@@ -104,36 +100,25 @@ int main(int argc, char** argv){
     }
     */
     
-
     // Empiezo a hacer la comunicacion entre los procesos y voy ordenando
     for (fase = 1; fase < nrProcesos; fase = fase << 1) {
         tamRecv = tamParte * fase;
         if (miID % (fase << 1) == 0) {
             if (miID + fase < nrProcesos) {
                 
+                // Espera a recibir la parte del arreglo ordenado
                 MPI_Recv(A + parteA, tamRecv, MPI_INT, miID + fase, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
                 // Fusionar los datos recibidos con los datos locales
                 merge(A, tempA, 0, parteA, parteA + tamRecv);
                 
-                /*
-                if (miID == 2){
-                    printf("Se va ordenando de la siguiente manera: \n");
-                    for (int i = parte; i < parte + tamRecv; i++) {
-                        printf("|%d ", A[i]);
-                    }
-                    printf("\n");
-                    printf("Quedandonos por ahora: \n");
-                    for (int i = 0; i < N; i++) {
-                        printf("|%d ", A[i]);
-                    }
-                    printf("\n");
-                }
-                */
+                // Aumenta el desplazamiento
                 parteA += tamRecv;
             }
         } else {
+            // Calculo el id destinatario
             dest = miID - fase;
+            // Envio la parte arreglaada y salgo del bucle
             MPI_Send(A, tamRecv, MPI_INT, dest, 0, MPI_COMM_WORLD);
             break;
         }
@@ -143,6 +128,7 @@ int main(int argc, char** argv){
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Sigo ordenando ahora el arreglo B
+
     // El proceso root (0) distribuye equitativamente una parte del arreglo B a cada proceso, incluyendose 
     MPI_Scatter(B, tamParte, MPI_INT, B, tamParte, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -154,6 +140,7 @@ int main(int argc, char** argv){
         tamRecv = tamParte * fase;
         if (miID % (fase << 1) == 0) {
             if (miID + fase < nrProcesos) {
+
                 // Espera a recibir la parte del arreglo ordenado
                 MPI_Recv(B + parteB, tamRecv, MPI_INT, miID + fase, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
@@ -181,6 +168,7 @@ int main(int argc, char** argv){
     MPI_Scatter(B, tamParte, MPI_INT, B, tamParte, MPI_INT, 0, MPI_COMM_WORLD);
     // Cada proceso hace su parte de la comparacion
     comparacion_local = comparar(A, B, tamParte);
+    /*
     if( miID == 0 ){
         printf("Tengo guardado asi en A con id = 0 \n");
         for (int i = 0; i < N; i++) {
@@ -205,14 +193,17 @@ int main(int argc, char** argv){
         printf("Comparando lolcamente me da %d", comparacion_local);
         
     }
-    // El proceso root recibe los valores y dictamina si son iguales o no a traves de un AND lógico (si todos son 1, es igual a uno; caso contrario es 0)
+    */
+    // El proceso root recibe los valores y dictamina si son iguales o no a traves de un AND lógico (si todos son 1, es verdadero; caso contrario es falso)
     MPI_Reduce(&comparacion_local, &comparacion_global, 1, MPI_INT, MPI_LAND, 0, MPI_COMM_WORLD);
 
     // El proceso root (0) reúne los datos ordenados finales
     if (miID == 0) {
+        /*
         printf("\n");
         printf("Y finalmente comparando globalmente me da %d", comparacion_global);
         printf("\n");
+        */
         printf("Tiempo de ejecucion: %fs \n", dwalltime() - timetick);
         
     }
@@ -242,13 +233,14 @@ void* inicializar(int* A, int* B, int N){
     // Asigno un elemento aleatorio al primer arreglo (A) y se lo copio hacia el segundo arreglo (B) asi son iguales
     for(int i = 0; i < N; i++){
         A[i] = rand() % 1200;
-        B[i] = A[i];
+        B[N - 1 - i] = A[i];
     }
-    B[N-1] = A[0];// Modifico un elemento de los arreglos para hacerlos diferentes
+    B[0] = A[0];// Modifico un elemento de los arreglos para hacerlos diferentes
 }
 
 
 /*_________________MERGE SORT___________________*/
+
 void* mergesort(int* array, int* temp, int N) {
     int actual, comienzo;
     for (actual = 1; actual <= N - 1; actual = 2 * actual) { // Arma paquetes de 2, 4, ... n/2 elementos
