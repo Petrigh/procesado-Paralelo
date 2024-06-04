@@ -61,7 +61,6 @@ int main(int argc, char* argv[]){
         pthread_join(misThreads[id],NULL);
     }
     printf("Tiempo de ejecucion: %fs \n", dwalltime() - timetick);
-    printArrays(0,length,length);
 
     if(compareResult)
         printf("Los arreglos son distintos\n");
@@ -137,7 +136,6 @@ void* divideAndConquer(void *arg){
         offset = parte;
         parte = parte<<1;
     }
-    printf("Thread %d rompio en %d mod %d esperando en fase %.0f\n",tid,tid, 1 << (fase),log2(fase));
     pthread_barrier_wait(&barreraCompare);
 
     parte=length/T;
