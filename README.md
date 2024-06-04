@@ -4,7 +4,7 @@ Parallel algorithms in C for numeric sorting using multithreading techniques in 
 
 ## Overview
 This project consists of 2 optimized algorithms that sort 2 arrays of numbers in ascending order and then checks if they contain the same numbers.
-Each algorithm tackles the challange with a different architectur in mind, one with a shared memory system using Pthreads, and the other in a distributed memory enviroment, where MPI was used.
+Each algorithm tackles the challenge with a different architecture in mind, one with a shared memory system using Pthreads, and the other in a distributed memory enviroment, where MPI was used.
 Both algorithms were run and tested in a cluster located in UNLP's computer science faculty.
 
 ## Getting Started
