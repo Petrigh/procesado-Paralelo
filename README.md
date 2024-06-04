@@ -10,8 +10,6 @@ Both algorithms were run and tested in a cluster located in UNLP's computer scie
 ## Getting Started
 
 - [Running the algorithms](#running)
-- [Taking the Robot Home](#taking-home)
-- [Contributing](#contributing)
 - [LICENSE](#license)
 
 ### Running the algorithms
